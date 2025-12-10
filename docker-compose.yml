@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cbs_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: superset
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  superset:
+    image: apache/superset:latest-dev
+    container_name: cbs_superset
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      SUPERSET_ENV: production
+      SUPERSET_LOAD_EXAMPLES: "no"
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-changeme_please}
+      SUPERSET_DATABASE_URI: postgresql+psycopg2://superset:superset@postgres:5432/superset
+    volumes:
+      - superset_home:/app/superset_home
+      # - ./superset/superset_config.py:/app/pythonpath/superset_config.py
+    ports:
+      - "8088:8088"
+    command:
+      [
+        "bash",
+        "-c",
+        "superset db upgrade         && superset fab create-admin              --username admin              --firstname Superset              --lastname Admin              --email admin@admin.com              --password admin || true         && superset init         && gunicorn --bind 0.0.0.0:8088 'superset.app:create_app()'"
+      ]
+
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    container_name: cbs_etl
+    depends_on:
+      - postgres
+    environment:
+      PG_DSN: ${PG_DSN:-postgresql://superset:superset@postgres:5432/superset}
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command:
+      [
+        "bash",
+        "-c",
+        "python scripts/cbs_pipeline.py download && \
+         python scripts/cbs_pipeline.py transform && \
+         python scripts/cbs_pipeline.py load && \
+         tail -f /dev/null"
+      ]
+
+volumes:
+  pgdata:
+  superset_home:

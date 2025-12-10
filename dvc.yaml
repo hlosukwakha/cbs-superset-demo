@@ -1,0 +1,33 @@
+stages:
+  download_cbs:
+    cmd: python scripts/cbs_pipeline.py download
+    deps:
+      - scripts/cbs_pipeline.py
+    outs:
+      - data/raw/population_keyfigures.csv
+      - data/raw/population_dynamics_region.csv
+      - data/raw/cpi.csv
+      - data/raw/pupils_region.csv
+
+  transform_cbs:
+    cmd: python scripts/cbs_pipeline.py transform
+    deps:
+      - scripts/cbs_pipeline.py
+      - data/raw/population_keyfigures.csv
+      - data/raw/population_dynamics_region.csv
+      - data/raw/cpi.csv
+      - data/raw/pupils_region.csv
+    outs:
+      - data/processed/population_keyfigures.parquet
+      - data/processed/population_dynamics_region.parquet
+      - data/processed/cpi.parquet
+      - data/processed/pupils_region.parquet
+
+  load_postgres:
+    cmd: python scripts/cbs_pipeline.py load
+    deps:
+      - scripts/cbs_pipeline.py
+      - data/processed/population_keyfigures.parquet
+      - data/processed/population_dynamics_region.parquet
+      - data/processed/cpi.parquet
+      - data/processed/pupils_region.parquet

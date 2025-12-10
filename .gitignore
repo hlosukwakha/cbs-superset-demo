@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.superset/
+superset_home/
+pgdata/
+.dvc/
+.dvc.lock
+data/raw/*.csv
+data/processed/*.parquet
